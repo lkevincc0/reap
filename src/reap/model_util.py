@@ -205,6 +205,10 @@ def patched_model_map(model: str):
         patched = True
         model_name = "artifacts/models/Qwen3-Coder-480B-A35B-Instruct-FP8"
 
+    if model == "stepfun-ai/Step-3.5-Flash":
+        patched = True
+        model_name = "artifacts/models/Step-3.5-Flash"
+
     if patched:
         logger.info(f"Using patched model for {model} from: {model_name}")
     return model_name

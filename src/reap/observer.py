@@ -378,10 +378,23 @@ class MoETransformerObserver(BaseTransformerObserver):
                 *_, router_logits = output  # (total_tokens, num_experts)
                 _, selected_experts = torch.topk(router_logits, top_k, dim=-1)
                 # selected_experts = selected_experts.to(device)
-                for idx, expert in enumerate(module.experts):
-                    activations[idx] = expert(flat_input).to(
-                        device
-                    )  # (num_experts, total_seq_len, hidden_dim)
+                
+                if module.__class__.__name__ == "Step3p5MoEMLP":
+                    for idx in range(num_experts):
+                        # Step-3.5 manual FFN computation
+                        # up_proj, gate_proj, and down_proj take (input, expert_idx)
+                        up = module.up_proj(flat_input, idx)
+                        gate = module.act_fn(module.gate_proj(flat_input, idx))
+                        if module.limit is not None:
+                             gate = gate.clamp(min=None, max=module.limit)
+                             up = up.clamp(min=-module.limit, max=module.limit)
+                        val = module.down_proj(gate * up, idx)
+                        activations[idx] = val.to(device)
+                else:
+                    for idx, expert in enumerate(module.experts):
+                        activations[idx] = expert(flat_input).to(
+                            device
+                        )  # (num_experts, total_seq_len, hidden_dim)
 
             del flat_input
             num_tokens = batch_size * sequence_length
@@ -614,6 +627,14 @@ class Glm44MoEObserverHookConfig(MoETransformerObserverConfig):
     fused_experts: bool = False
 
 
+@dataclass
+class Step3p5MoEObserverHookConfig(MoETransformerObserverConfig):
+    module_class_name_to_hook_regex: Optional[str] = "Step3p5MoEMLP"
+    num_experts_attr_name: str = "num_experts"
+    top_k_attr_name: str = "top_k"
+    fused_experts: bool = False
+
+
 OBSERVER_CONFIG_REGISTRY = {
     "Qwen3MoeForCausalLM": Qwen3MoEObserverHookConfig,
     "NonUniformQwen3MoeForCausalLM": Qwen3MoEObserverHookConfig,
@@ -623,4 +644,5 @@ OBSERVER_CONFIG_REGISTRY = {
     "Ernie4_5_MoEForCausalLM": Ernie4_5MoEObserverHookConfig,
     "Ernie4_5_MoeForCausalLM": Ernie4_5MoEObserverHookConfig,
     "Glm4MoeForCausalLM": Glm44MoEObserverHookConfig,
+    "Step3p5ForCausalLM": Step3p5MoEObserverHookConfig,
 }

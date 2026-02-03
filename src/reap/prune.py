@@ -174,16 +174,28 @@ def prune(
                 )
             setattr(moe, model_attrs["router"], router)
         else:
-            # prune fused experts, only tested for llama-4
-            moe.experts.gate_up_proj.data = moe.experts.gate_up_proj[
-                retained_expert_indicies
-            ]
-            moe.experts.down_proj.data = moe.experts.down_proj[retained_expert_indicies]
-            moe.num_experts = len(retained_expert_indicies)
-            moe.router.weight.data = moe.router.weight.data[retained_expert_indicies]
-            moe.router.out_features = len(retained_expert_indicies)
-            if hasattr(moe.router, "num_experts"):  # transformers >= 4.54+
-                moe.router.num_experts = len(retained_expert_indicies)
+            if model.__class__.__name__ == "Step3p5ForCausalLM":
+                # Step-3.5 fused experts
+                moe.up_proj.weight.data = moe.up_proj.weight.data[retained_expert_indicies]
+                moe.gate_proj.weight.data = moe.gate_proj.weight.data[retained_expert_indicies]
+                moe.down_proj.weight.data = moe.down_proj.weight.data[retained_expert_indicies]
+                
+                moe.num_experts = len(retained_expert_indicies)
+                
+                router = getattr(moe, model_attrs["router"])
+                router.weight.data = router.weight.data[retained_expert_indicies]
+                router.out_features = len(retained_expert_indicies)
+            else:
+                # prune fused experts, only tested for llama-4
+                moe.experts.gate_up_proj.data = moe.experts.gate_up_proj[
+                    retained_expert_indicies
+                ]
+                moe.experts.down_proj.data = moe.experts.down_proj[retained_expert_indicies]
+                moe.num_experts = len(retained_expert_indicies)
+                moe.router.weight.data = moe.router.weight.data[retained_expert_indicies]
+                moe.router.out_features = len(retained_expert_indicies)
+                if hasattr(moe.router, "num_experts"):  # transformers >= 4.54+
+                    moe.router.num_experts = len(retained_expert_indicies)
 
     # patch config and dump
     logger.info("Saving pruned model...")
