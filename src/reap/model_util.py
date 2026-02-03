@@ -115,6 +115,17 @@ MODEL_ATTRS = {
         "num_experts": "n_routed_experts",
         "num_experts_per_tok": "num_experts_per_tok",
     },
+    "Step3p5ForCausalLM": {
+        "moe_block": "moe",
+        "gate_proj": "gate_proj",
+        "up_proj": "up_proj",
+        "down_proj": "down_proj",
+        "experts": None,  # Step3p5 uses fused MoELinear, no separate experts ModuleList
+        "fused": True,
+        "router": "gate",
+        "num_experts": "moe_num_experts",
+        "num_experts_per_tok": "moe_top_k",
+    },
 }
 
 

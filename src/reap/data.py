@@ -432,4 +432,5 @@ DATASET_REGISTRY: dict[str, BaseDatasetProcessor] = {
     "theblackcat102/evol-codealpaca-v1": CodeAlpacaChatDataset,
     "euclaise/WritingPrompts_curated": WritingPromptsChatDataset,
     "allenai/tulu-3-sft-personas-math": PersonasMathChatDataset,
+    "lkevincc0/glm47-math-code-calibration-1024": CodeAlpacaChatDataset,
 }
